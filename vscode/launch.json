@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug src/run.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/run.py",
+      "console": "integratedTerminal",
+      "env": {},
+      "python": "${workspaceFolder}/venv/Scripts/python.exe",
+      "args": ["download"]               // Replace with your desired arguments
+    }
+  ]
+}
