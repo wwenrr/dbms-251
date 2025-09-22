@@ -5,6 +5,7 @@ import zipfile
 from io import BytesIO
 import logging
 from tqdm import tqdm
+import pydicom
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +66,35 @@ class DatasetService:
             os.remove(zip_path)
         else:
             logger.error("Failed to download image data, status code: %d", response.status_code)
+
+    @staticmethod
+    def get_image_metadata(idx):
+        metadata_path = f"data/image_data/01_MRI_DATA/{idx}"
+
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"Path not found: {metadata_path}")
+
+        metadata_list = []
+
+        for root, _, files in os.walk(metadata_path):
+            for file in files:
+                if file.lower().endswith('.ima'):
+                    file_path = os.path.join(root, file)
+                    try:
+                        dcm = pydicom.dcmread(file_path, stop_before_pixels=True)
+
+                        # Convert DICOM Dataset to a flat dictionary
+                        metadata = {
+                            "File": file_path,
+                        }
+                        for elem in dcm:
+                            keyword = elem.keyword or elem.name or str(elem.tag)
+                            metadata[keyword] = str(elem.value)
+
+                        metadata_list.append(metadata)
+
+                    except Exception as e:
+                        print(f"[WARN] Cannot read {file_path}: {e}")
+        
+        return metadata_list
+        
