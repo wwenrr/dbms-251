@@ -4,6 +4,9 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from service.redis_service import RedisService
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MriService:
     CSV_PATH = 'data/text_data.csv'
@@ -14,11 +17,11 @@ class MriService:
         RedisService.configure()
 
         if not os.path.exists(MriService.CSV_PATH):
-            print(f"CSV file not found: {MriService.CSV_PATH}")
+            logger.error(f"CSV file not found: {MriService.CSV_PATH}")
             return
 
         if not os.path.exists(MriService.METADATA_PATH):
-            print(f"Metadata folder not found: {MriService.METADATA_PATH}")
+            logger.error(f"Metadata folder not found: {MriService.METADATA_PATH}")
             return
 
         with open(MriService.CSV_PATH, newline='', encoding='utf-8') as csvfile:
@@ -64,4 +67,4 @@ class MriService:
                 try:
                     future.result()
                 except Exception as e:
-                    print(f"Error processing a row: {e}")
+                    logger.error(f"Error processing a row: {e}")

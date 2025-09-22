@@ -94,7 +94,7 @@ class DatasetService:
                         metadata_list.append(metadata)
 
                     except Exception as e:
-                        print(f"[WARN] Cannot read {file_path}: {e}")
+                        logger.warning(f"Cannot read {file_path}: {e}")
         
         return metadata_list
         
