@@ -15,6 +15,7 @@ class MriService:
     @staticmethod
     def process_mri_data(max_workers=32):
         RedisService.configure()
+        RedisService.create_index()
 
         if not os.path.exists(MriService.CSV_PATH):
             logger.error(f"CSV file not found: {MriService.CSV_PATH}")
@@ -44,19 +45,18 @@ class MriService:
                 except json.JSONDecodeError:
                     metadata = []
 
-            redis_key = f"patient:{patient_id}"
-            RedisService.hset(redis_key, "notes", notes)
+            # Lưu thông tin patient (notes) riêng
+            patient_key = f"patient:{patient_id}"
+            RedisService.json_set(patient_key, {
+                "notes": notes
+            })
 
+            # Lưu từng object metadata riêng biệt với patient_id để dễ query
             for idx, item in enumerate(metadata):
-                meta_key = f"{redis_key}:metadata:{idx}"
-                for field, value in item.items():
-                    if isinstance(value, (dict, list)):
-                        value = json.dumps(value, ensure_ascii=False)
-                    else:
-                        value = str(value)
-                    RedisService.hset(meta_key, field, value)
-
-            RedisService.hset(redis_key, "metadata_count", len(metadata))
+                meta_key = f"metadata:{patient_id}:{idx}"
+                # Thêm patient_id vào mỗi metadata object để tạo TAG index dễ dàng
+                item['patient_id'] = patient_id
+                RedisService.json_set(meta_key, item)
 
             return f"Saved patient {patient_id}"
 

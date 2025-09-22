@@ -1,4 +1,8 @@
 import redis
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RedisService:
     _client = None
@@ -22,53 +26,59 @@ class RedisService:
             return value.decode()
         return None
     
-    # -------- HASH METHODS --------
-
+    # JSON.SET wrapper for RedisJSON module
     @classmethod
-    def hset(cls, key, field, value):
-        """Set field in hash key."""
+    def json_set(cls, key, data):
         if cls._client is None:
             cls.configure()
-        return cls._client.hset(key, field, value)
+        try:
+            cls._client.execute_command('JSON.SET', key, '$', json.dumps(data, ensure_ascii=False))
+        except Exception as e:
+            logger.error(f"Failed to JSON.SET key {key}: {e}")
+            raise e
 
     @classmethod
-    def hget(cls, key, field):
-        """Get value of field in hash key."""
+    def json_get(cls, key, path='$'):
         if cls._client is None:
             cls.configure()
-        value = cls._client.hget(key, field)
-        if value:
-            return value.decode()
-        return None
-
-    @classmethod
-    def hgetall(cls, key):
-        """Get all fields and values in hash key as dict of strings."""
-        if cls._client is None:
-            cls.configure()
-        data = cls._client.hgetall(key)
-        # data is dict bytes->bytes, decode to str->str
-        return {k.decode(): v.decode() for k, v in data.items()}
-
-    @classmethod
-    def hexists(cls, key, field):
-        """Check if field exists in hash key."""
-        if cls._client is None:
-            cls.configure()
-        return cls._client.hexists(key, field)
-
-    @classmethod
-    def hdel(cls, key, *fields):
-        """Delete one or more fields from hash key."""
-        if cls._client is None:
-            cls.configure()
-        return cls._client.hdel(key, *fields)
-    
-    # -------- OTHER METHODS --------
+        try:
+            result = cls._client.execute_command('JSON.GET', key, path)
+            if result:
+                return json.loads(result)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to JSON.GET key {key}: {e}")
+            raise e
 
     @classmethod
     def clean(cls):
-        """Flush all data in the current Redis database."""
         if cls._client is None:
             cls.configure()
         cls._client.flushdb()
+
+    @classmethod
+    def create_index(cls):
+        if cls._client is None:
+            cls.configure()
+
+        try:
+            cls._client.execute_command(
+                "FT.CREATE", "metadata_idx", "ON", "JSON",
+                "PREFIX", "1", "metadata:",
+                "SCHEMA",
+                "$.mri", "AS", "mri", "NUMERIC",
+                "$.patient_id", "AS", "patient_id", "TAG",
+                "$.WindowWidth", "AS", "WindowWidth", "NUMERIC",
+                "$.Modality", "AS", "Modality", "TEXT",
+                "$.Manufacturer", "AS", "Manufacturer", "TEXT",
+                "$.SliceThickness", "AS", "SliceThickness", "TEXT",
+                "$.MagneticFieldStrength", "AS", "MagneticFieldStrength", "TEXT",
+                "$.PatientSex", "AS", "PatientSex", "TEXT",
+                "$.PatientAge", "AS", "PatientAge", "TEXT"
+            )
+        except redis.exceptions.ResponseError as e:
+            if "Index already exists" in str(e):
+                logger.info("Index metadata_idx already exists, skipping creation.")
+            else:
+                logger.error(f"Error creating index: {e}")
+                raise e
