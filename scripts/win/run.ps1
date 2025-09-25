@@ -8,8 +8,7 @@ if ($versionOutput -notmatch "Python 3\.13\.7") {
 }
 
 if (-not (Test-Path $venvPython)) {
-    Write-Error "Virtual environment not found. Please run install.ps1 first."
-    exit 1
+    Write-Warning "Virtual environment not found. Please run install.ps1 first."
 }
 
 & $venvPython -B "src/run.py" @args

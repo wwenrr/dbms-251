@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+venvPython="./venv/bin/py"
+
+if [ ! -x "$venvPython" ]; then
+  echo "Virtual environment not found. Please run install.sh first." >&2
+  exit 1
+fi
+
+versionOutput=$("$venvPython" --version 2>&1)
+expected="Python 3.13.7"
+
+if [[ "$versionOutput" != "$expected" ]]; then
+  echo "Warning: Incorrect Python version. Expected $expected, but got: $versionOutput" >&2
+fi
+
+exec "$venvPython" -B src/run.py "$@"

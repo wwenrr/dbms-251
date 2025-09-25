@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+lib="${1:-}"
+
+venvPath="./venv"
+pythonExe="$venvPath/bin/python"
+pipExe="$venvPath/bin/pip"
+
+# Check if py is installed
+if ! command -v py >/dev/null 2>&1; then
+  echo "'py' is not installed or not in PATH." >&2
+  exit 1
+fi
+
+# Check if venv module exists
+if ! py -m venv --help >/dev/null 2>&1; then
+  echo "venv not found, installing virtualenv..."
+  py -m pip install --upgrade pip
+  py -m pip install virtualenv
+fi
+
+# Create virtual environment if missing
+if [ ! -d "$venvPath" ]; then
+  echo "Creating virtual environment..."
+  py -m venv "$venvPath"
+fi
+
+"$pythonExe" -m pip install --upgrade pip
+
+if [ -n "$lib" ]; then
+  echo "Installing library: $lib"
+  "$pipExe" install "$lib"
+
+  "$pipExe" freeze > req.txt
+else
+  if [ ! -f req.txt ]; then
+    echo "req.txt not found. Creating empty req.txt..."
+    touch req.txt
+  fi
+
+  echo "Installing from req.txt..."
+  "$pipExe" install -r req.txt
+fi
