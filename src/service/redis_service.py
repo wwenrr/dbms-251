@@ -32,10 +32,11 @@ class RedisService:
         if cls._client is None:
             cls.configure()
         try:
-            cls._client.set(key, json.dumps(data, ensure_ascii=False))
+            cls._client.execute_command('JSON.SET', key, '$', json.dumps(data, ensure_ascii=False))
         except Exception as e:
-            logger.error(f"Failed to SET key {key}: {e}")
+            logger.error(f"Failed to JSON.SET key {key}: {e}")
             raise e
+            
 
     @classmethod
     def json_get(cls, key, path='$'):
