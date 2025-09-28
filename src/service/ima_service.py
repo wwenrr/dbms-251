@@ -22,7 +22,7 @@ class ImaService:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2, ensure_ascii=False)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
             futures = [executor.submit(process, folder_name) for folder_name in folder_list if folder_name.isdigit() and len(folder_name) == 4]
 
             for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Parsing metadata"):

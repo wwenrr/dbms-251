@@ -13,6 +13,12 @@ class MriService:
     METADATA_PATH = 'data/metadata'
 
     @staticmethod
+    def _clean_item(item: dict) -> dict:
+        return {
+            k: v for k, v in item.items()
+            if v not in (None, "", [], {}, ())
+        }
+    @staticmethod
     def process_mri_data(max_workers=32):
         RedisService.configure()
         RedisService.create_index()
@@ -51,11 +57,14 @@ class MriService:
                 "notes": notes
             })
 
-            # Lưu từng object metadata riêng biệt với patient_id để dễ query
-            for idx, item in enumerate(metadata):
-                meta_key = f"metadata:{patient_id}:{idx}"
-                # Thêm patient_id vào mỗi metadata object để tạo TAG index dễ dàng
+            
+            for idx, raw_item in enumerate(metadata):
+                item = MriService._clean_item(raw_item)   
+                if not item:
+                    continue  
+
                 item['patient_id'] = patient_id
+                meta_key = f"metadata:{patient_id}:{idx}"
                 RedisService.json_set(meta_key, item)
 
             return f"Saved patient {patient_id}"
