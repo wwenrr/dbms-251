@@ -26,15 +26,15 @@ class RedisService:
             return value.decode()
         return None
     
-    # JSON.SET wrapper for RedisJSON module
+    # Simple Redis SET/GET for JSON data
     @classmethod
     def json_set(cls, key, data):
         if cls._client is None:
             cls.configure()
         try:
-            cls._client.execute_command('JSON.SET', key, '$', json.dumps(data, ensure_ascii=False))
+            cls._client.set(key, json.dumps(data, ensure_ascii=False))
         except Exception as e:
-            logger.error(f"Failed to JSON.SET key {key}: {e}")
+            logger.error(f"Failed to SET key {key}: {e}")
             raise e
 
     @classmethod
@@ -42,12 +42,12 @@ class RedisService:
         if cls._client is None:
             cls.configure()
         try:
-            result = cls._client.execute_command('JSON.GET', key, path)
+            result = cls._client.get(key)
             if result:
                 return json.loads(result)
             return None
         except Exception as e:
-            logger.error(f"Failed to JSON.GET key {key}: {e}")
+            logger.error(f"Failed to GET key {key}: {e}")
             raise e
 
     @classmethod
@@ -60,25 +60,7 @@ class RedisService:
     def create_index(cls):
         if cls._client is None:
             cls.configure()
-
-        try:
-            cls._client.execute_command(
-                "FT.CREATE", "metadata_idx", "ON", "JSON",
-                "PREFIX", "1", "metadata:",
-                "SCHEMA",
-                "$.mri", "AS", "mri", "NUMERIC",
-                "$.patient_id", "AS", "patient_id", "TAG",
-                "$.WindowWidth", "AS", "WindowWidth", "NUMERIC",
-                "$.Modality", "AS", "Modality", "TEXT",
-                "$.Manufacturer", "AS", "Manufacturer", "TEXT",
-                "$.SliceThickness", "AS", "SliceThickness", "TEXT",
-                "$.MagneticFieldStrength", "AS", "MagneticFieldStrength", "TEXT",
-                "$.PatientSex", "AS", "PatientSex", "TEXT",
-                "$.PatientAge", "AS", "PatientAge", "TEXT"
-            )
-        except redis.exceptions.ResponseError as e:
-            if "Index already exists" in str(e):
-                logger.info("Index metadata_idx already exists, skipping creation.")
-            else:
-                logger.error(f"Error creating index: {e}")
-                raise e
+        
+        # Simple Redis without RediSearch - just log that we're using basic Redis
+        logger.info("Using basic Redis without RediSearch module")
+        return True
